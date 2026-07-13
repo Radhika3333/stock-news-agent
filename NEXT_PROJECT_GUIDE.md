@@ -1,275 +1,306 @@
-# Next Project: AI Stock News Summarizer
+# Project 2: AI Stock News Summarizer — COMPLETED
 
-## Goal
+## What We Built
 
-Upgrade the stock news agent to send fetched news to an LLM (Claude/GPT) and get back a smart, human-readable summary of the market mood — not just raw headlines.
+Upgraded the stock news agent to send fetched news headlines to an LLM (Groq/Llama) and get back a smart, human-readable summary of the market mood.
 
-**Example output:**
+**Actual output we got:**
 ```
-MARKET SUMMARY (Last 1 Hour):
-  1. Tech stocks rallying — Nasdaq up 2% driven by chip sector gains
-  2. Oil prices rising — Middle East supply concerns pushing crude higher
-  3. Gold weakening — Rate-hike expectations pulling investors away from safe havens
-```
-
----
-
-## What You'll Learn
-
-| Concept | Why It Matters |
-|---------|---------------|
-| LLM API calls (Claude/GPT) | Core skill — every AI agent talks to an LLM |
-| System prompts | Control HOW the LLM responds (tone, format, rules) |
-| Prompt engineering | Get reliable, structured output instead of random text |
-| Tokens & pricing | Understand what API calls cost and how to optimize |
-| Chaining (fetch → summarize) | Foundation of agentic AI — one step feeds the next |
-
----
-
-## Prerequisites
-
-Before starting, make sure you're comfortable with:
-
-- [x] Python basics (functions, loops, dicts) — done in stock-news-agent
-- [x] HTTP API calls with requests — done in stock-news-agent
-- [x] .env files for secrets — done in stock-news-agent
-- [ ] Python classes (OOP basics) — learn before or during this project
-- [ ] Anthropic or OpenAI API key — sign up before starting
-
----
-
-## Phase 1: Get an API Key
-
-### Option A: Anthropic (Claude) — Recommended
-1. Go to https://console.anthropic.com/
-2. Sign up and add billing (small amount, $5 is enough)
-3. Go to API Keys → Create new key
-4. Save it in your `.env` file as `ANTHROPIC_API_KEY=your_key`
-
-### Option B: OpenAI (GPT)
-1. Go to https://platform.openai.com/
-2. Sign up and add billing
-3. Go to API Keys → Create new secret key
-4. Save it in your `.env` file as `OPENAI_API_KEY=your_key`
-
-### Cost Estimate
-- Each summary call uses ~500-1000 tokens
-- At ~$0.003 per 1K tokens (Claude Haiku / GPT-4o-mini)
-- Running every 10 min = 144 calls/day = ~$0.50/day
-- Use a cheap model (Haiku or GPT-4o-mini) for this project
-
----
-
-## Phase 2: Install the SDK
-
-```bash
-cd ~/Projects/stock-news-agent
-source venv/bin/activate
-
-# For Anthropic (Claude)
-pip install anthropic
-
-# OR for OpenAI (GPT)
-pip install openai
+  MARKET SUMMARY (AI)
+  ────────────────────────────────────────
+  - Conflict: Iran escalates US attacks
+  - Energy: Oil prices surge
+  - Markets: Stocks fall sharply
 ```
 
-### What is an SDK?
-SDK = Software Development Kit. It's a library that makes it easy to call an API.
-Instead of manually building HTTP requests, you call simple Python methods like:
+---
+
+## What We Learned (With Detailed Explanations)
+
+### 1. LLM API Calls — Talking to AI from Code
+
+**What:** Instead of chatting with AI in a browser (like ChatGPT), we called an AI model directly from our Python code.
+
+**How it works:**
+```
+Your Python script  →  sends text over internet  →  Groq's servers (run Llama AI model)
+                    ←  receives AI response       ←
+```
+
+**The code:**
 ```python
-client.messages.create(model="...", messages=[...])
+from groq import Groq
+
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))   # Connect to Groq
+response = client.chat.completions.create(           # Send request
+    model="llama-3.3-70b-versatile",                 # Which AI brain to use
+    messages=[...]                                   # What to send
+)
+answer = response.choices[0].message.content         # Extract the text response
 ```
+
+**Why this matters:** Every AI agent, chatbot, or AI product works this way — sending text to an LLM and getting a response back. This is the foundation.
 
 ---
 
-## Phase 3: Understand Key Concepts
+### 2. System Prompts — Controlling AI Behavior
 
-### What is a System Prompt?
-A hidden instruction that tells the LLM HOW to behave. The user never sees it.
+**What:** A hidden instruction that tells the AI HOW to behave. The end user never sees it.
 
+**Our system prompt:**
 ```python
-# System prompt sets the rules
-system = "You are a stock market analyst. Summarize news in 3 bullet points. No opinions, no advice, only facts."
-
-# User message is the actual input
-user = "Here are today's headlines: ..."
+"You are a stock market news analyst.
+Given a list of headlines, provide exactly 3 bullet points summarizing the market mood.
+Rules:
+- Facts only, no investment advice
+- Each bullet should cover a different theme
+- Keep each bullet under 20 words
+- Format: '- Theme: Summary'"
 ```
 
-**Why it matters:** Without a system prompt, the LLM might give investment advice, add disclaimers, or format output randomly. The system prompt gives you control.
+**Why it matters:** Without a system prompt, the AI might:
+- Give investment advice (dangerous, legally risky)
+- Write 10 paragraphs (too long)
+- Format output randomly (can't parse it)
+- Add disclaimers (unnecessary noise)
 
-### What are Tokens?
-Tokens are chunks of text (roughly 4 characters = 1 token). You pay per token.
+The system prompt gives you **control** over the AI's output.
+
+**How messages work (OpenAI-style format — industry standard):**
+```python
+messages=[
+    {"role": "system", "content": "...rules..."},    # Hidden instructions (AI's personality)
+    {"role": "user", "content": "...data..."},        # What you send (headlines)
+]
+```
+Most LLM providers (Groq, OpenAI, Anthropic) use this same format.
+
+---
+
+### 3. Prompt Engineering — Getting Reliable Output
+
+**What:** The skill of writing prompts that get consistent, useful results from an AI.
+
+**We tested 3 different system prompts on the SAME headlines:**
+
+| Prompt Style | System Prompt | Output |
+|---|---|---|
+| **Expert analyst** | "You are a stock market news analyst..." | `- Conflict: Iran escalates US attacks` |
+| **Beginner-friendly** | "Explain like the reader knows nothing about stocks..." | `- War: Countries fighting raises oil prices` |
+| **JSON structured** | "Return a JSON array with theme, summary, sentiment..." | `{"theme": "War", "summary": "...", "sentiment": "negative"}` |
+
+**Key lesson:** Same model + same data + different prompt = completely different output. The prompt is your main control lever.
+
+**Structured Output (JSON) — Why it's important:**
+```python
+# Plain text — hard for code to work with
+"Oil prices are rising due to Middle East tensions"
+
+# JSON — easy for code to parse and use
+{"theme": "Energy", "summary": "Oil rising on supply fears", "sentiment": "negative"}
+```
+In real AI apps, you almost always want JSON so your code can make decisions based on the AI's output (e.g., "if sentiment is negative, send an alert").
+
+---
+
+### 4. Temperature — Controlling Randomness
+
+| Temperature | Behavior | Use When |
+|------------|----------|----------|
+| 0.0 | Same input = same output every time | News summaries, data extraction |
+| 0.5 | Slight variation each time | General conversation |
+| 1.0 | Very creative, different each time | Creative writing, brainstorming |
+
+We used **0.0** because we want factual, consistent summaries — not creative stories.
+
+---
+
+### 5. Chaining — The Foundation of AI Agents
+
+**What:** Output of one step becomes input of the next step.
 
 ```
-"Stock market rallied today" = 5 tokens (approximate)
+Step 1: Finnhub API  →  returns 10 headlines
+                              |
+Step 2: Collect headlines into one string
+                              |
+Step 3: Send string to Groq LLM  →  returns 3-bullet summary
+                              |
+Step 4: Display summary in terminal
+```
+
+**Why this matters:** Every AI agent works on this principle:
+- RAG: Fetch documents → Find relevant chunks → Send to LLM → Answer
+- Tool-using agent: User asks question → Agent decides which tool → Runs tool → Sends result to LLM → Answer
+- Multi-agent: Agent 1 output → Agent 2 input → Agent 3 input → Final result
+
+You just built your first chain!
+
+---
+
+### 6. Model Comparison — Choosing the Right Brain
+
+We compared two models on the same task:
+
+| Model | Size | Output Quality | Speed |
+|---|---|---|---|
+| `llama-3.3-70b-versatile` | 70 billion parameters | Follows instructions precisely | Slower |
+| `llama-3.1-8b-instant` | 8 billion parameters | Good but less precise | Faster |
+
+**Real-world lesson:** Always start with the cheapest/smallest model. Only upgrade if quality isn't good enough. Companies waste money using expensive models when cheap ones work fine.
+
+---
+
+### 7. Error Handling — Building Reliable Apps
+
+**What:** Using `try/except` to catch errors so your app doesn't crash.
+
+**Before (crashes):**
+```python
+def summarize_news(headlines):
+    client = Groq(api_key="wrong_key")
+    response = client.chat.completions.create(...)  # CRASH! Script stops.
+    return response.choices[0].message.content
+```
+
+**After (handles gracefully):**
+```python
+def summarize_news(headlines):
+    try:
+        client = Groq(api_key="wrong_key")
+        response = client.chat.completions.create(...)
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"Could not generate summary: {e}"  # Shows error, keeps running
+```
+
+**We tested this:** Put a wrong API key → script showed "Could not generate summary: Invalid API Key" but **didn't crash**. News still displayed, just without the AI summary.
+
+---
+
+### 8. Tokens & Pricing — What API Calls Cost
+
+**What are tokens?** Chunks of text (roughly 4 characters = 1 token).
+
+```
+"Stock market rallied today" = ~5 tokens
 ```
 
 - **Input tokens:** What you send (headlines) — cheaper
 - **Output tokens:** What the LLM generates (summary) — more expensive
-- **Tip:** Send only headlines, not full articles, to save tokens
 
-### What is Temperature?
-Controls randomness in the LLM's output.
+**Cost comparison:**
 
-| Temperature | Behavior |
-|------------|----------|
-| 0.0 | Deterministic — same input gives same output every time |
-| 0.5 | Balanced — slight variation |
-| 1.0 | Creative — more random, different each time |
+| Provider | Model | Cost | Our usage |
+|---|---|---|---|
+| Groq | Llama 3.3 70B | Free (rate-limited) | What we used |
+| Google Gemini | gemini-2.0-flash | Free tier (didn't work for us) | Tried first |
+| Anthropic | Claude Haiku | ~$0.003 per 1K tokens | ~₹420 ($5) for weeks |
+| OpenAI | GPT-4o-mini | ~$0.003 per 1K tokens | ~₹420 ($5) for weeks |
 
-For news summaries, use **0.0 or 0.2** — you want consistent, factual output.
-
----
-
-## Phase 4: Build the Summarizer
-
-### Step 1: Create a New Function
-
-Add a function that takes headlines and sends them to the LLM:
-
-```python
-import anthropic  # or openai
-
-def summarize_news(headlines):
-    """Send headlines to Claude and get a market summary"""
-
-    client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY from .env
-
-    # System prompt: controls the LLM's behavior
-    system_prompt = """You are a stock market news analyst.
-    Given a list of headlines, provide exactly 3 bullet points summarizing the market mood.
-    Rules:
-    - Facts only, no investment advice or suggestions
-    - Each bullet should cover a different theme (e.g., tech, commodities, geopolitics)
-    - Keep each bullet under 20 words
-    - Format: "- Theme: Summary"
-    """
-
-    # Send the headlines to Claude
-    message = client.messages.create(
-        model="claude-haiku-4-5-20251001",  # cheap, fast model
-        max_tokens=300,                      # limit output length
-        temperature=0.0,                     # factual, no creativity
-        system=system_prompt,
-        messages=[
-            {"role": "user", "content": f"Summarize these headlines:\n{headlines}"}
-        ]
-    )
-
-    # Extract and return the text response
-    return message.content[0].text
-```
-
-### Step 2: Connect It to Your Existing Script
-
-After fetching news, collect headlines and pass them to the summarizer:
-
-```python
-# Collect headlines from fetched news
-headlines = "\n".join([article["headline"] for article in recent_news])
-
-# Get AI summary
-if headlines:
-    summary = summarize_news(headlines)
-    print("\n  MARKET SUMMARY")
-    print(f"  {'─' * 40}")
-    print(f"  {summary}")
-```
-
-### Step 3: Test It
-
-```bash
-python3 stock_news.py
-```
-
-Expected output:
-```
-  STOCK NEWS (Last 1 Hour) — 2026-07-10 19:30:00
-  ──────────────────────────────────────────────────────
-
-   1. Nasdaq rallies on chip stocks...
-      Reuters  |  23m ago
-
-   2. Oil prices climb amid Middle East tensions...
-      Reuters  |  45m ago
-
-  ──────────────────────────────────────────────────────
-
-  MARKET SUMMARY
-  ────────────────────────────────────────
-  - Tech: Chip sector driving Nasdaq higher, offsetting geopolitical concerns
-  - Energy: Oil prices rising on Middle East supply disruption fears
-  - Macro: Markets largely shrugging off US-Iran tensions, focused on earnings
-```
+**Tip:** Send only headlines, not full articles, to save tokens and cost.
 
 ---
 
-## Phase 5: Experiment & Learn
+## What We Tried That Didn't Work (And Why)
 
-Once the basic version works, try these exercises:
+### Google Gemini — Free Tier Not Available
 
-### Exercise 1: Change the System Prompt
-Try different prompts and see how output changes:
-- "Summarize like a Twitter thread"
-- "Summarize for a beginner who knows nothing about stocks"
-- "Respond in JSON format with keys: theme, summary, sentiment"
-
-### Exercise 2: Structured Output (JSON)
-Make the LLM return JSON instead of plain text:
-```python
-system_prompt = """Return a JSON array with exactly 3 objects.
-Each object has: {"theme": "...", "summary": "...", "sentiment": "positive/negative/neutral"}
-No markdown, no explanation, just the JSON array."""
+We first tried Google Gemini (free), but got this error:
 ```
-Then parse it in Python with `json.loads(response)`.
+google.genai.errors.ClientError: 429 RESOURCE_EXHAUSTED
+quota exceeded... limit: 0
+```
 
-### Exercise 3: Compare Models
-Try different models and compare speed, quality, and cost:
-- `claude-haiku-4-5-20251001` — cheapest, fastest
-- `claude-sonnet-4-6` — balanced
-- `gpt-4o-mini` — OpenAI's cheap option
+**What happened:** Gemini's free tier wasn't available for our Google account/region (India). The `limit: 0` meant zero free requests allowed.
 
-### Exercise 4: Add Error Handling
-What happens when:
-- The API key is wrong?
-- You hit the rate limit?
-- The LLM returns unexpected format?
+**Lesson learned:** Free tiers vary by region and account. Always have a backup plan. We switched to **Groq** which worked immediately.
 
-Add try/except blocks and handle these gracefully.
+### Why Groq Worked
+- Truly free with generous limits
+- No credit card required
+- Runs open-source models (Llama) — same quality
+- Uses the same OpenAI-style API format (industry standard)
 
 ---
 
-## Project Structure (Final)
+## Git History (3 Commits)
+
+```
+1. 5f861bc - Initial commit: stock news agent with Finnhub API
+2. 10a0c19 - Add AI-powered market summary using Groq LLM
+3. 1cf570f - Add error handling for LLM API calls
+```
+
+**GitHub repo:** https://github.com/Radhika3333/stock-news-agent
+
+---
+
+## Final Project Structure
 
 ```
 stock-news-agent/
-├── .env                  # FINNHUB_API_KEY + ANTHROPIC_API_KEY
-├── .gitignore            # venv/, .env
-├── stock_news.py         # Fetch news + AI summary + 10-min loop
+├── .env                  # FINNHUB_API_KEY + GROQ_API_KEY
+├── .gitignore            # venv/, .env, __pycache__/
+├── stock_news.py         # Fetch news + AI summary + error handling + 10-min loop
 ├── venv/                 # Python virtual environment
-├── PROJECT_GUIDE.md      # Documentation for the first project
-└── NEXT_PROJECT_GUIDE.md # This file
+├── PROJECT_GUIDE.md      # Documentation for Project 1 (news fetcher)
+└── NEXT_PROJECT_GUIDE.md # This file (Project 2 — AI summarizer)
 ```
 
 ---
 
-## Key Takeaways After This Project
+## Concepts Mapped to Roadmap (balajichippada.com/roadmap)
 
-After completing this, you will understand:
+| Roadmap Phase | Concept | Where We Used It |
+|---|---|---|
+| Phase 1 | Python, APIs, .env | stock_news.py (Finnhub API) |
+| Phase 3 | LLM API calls | Groq SDK, client.chat.completions.create() |
+| Phase 3 | System prompts | Controlled AI output format and rules |
+| Phase 3 | Prompt engineering | Tested 3 different prompts, got structured JSON |
+| Phase 3 | Tokens & pricing | Chose free model (Groq) over paid (Anthropic) |
+| Phase 3 | Streaming (not done yet) | Future improvement |
+| Foundation | Chaining | Fetch → Summarize → Display |
+| Foundation | Error handling | try/except for graceful failures |
 
-1. **How to call an LLM from code** — not just chat UI, but programmatic access
-2. **System prompts** — how to control LLM behavior reliably
-3. **Prompt engineering** — getting structured, predictable output
-4. **Token economics** — what API calls cost and how to optimize
-5. **Chaining** — feeding output from one step (fetch) into another (summarize)
+---
 
-These are the building blocks for Phase 4 (RAG) and Phase 5 (Tool-using agents) in the roadmap.
+## Key Takeaways
+
+1. **LLM API calls** are simple — just send text, get text back
+2. **System prompts** are your main control lever — they determine output quality
+3. **Same data + different prompt = completely different output** — this is prompt engineering
+4. **JSON output** lets your code act on AI responses (not just display them)
+5. **Error handling** makes the difference between a demo and a real app
+6. **Start with the cheapest model** — upgrade only if needed
+7. **Chaining** (output of step 1 → input of step 2) is the foundation of all AI agents
+
+---
+
+## Next Project: Document Q&A with RAG (Phase 4)
+
+**Status:** Setup started, packages being installed in `~/Projects/doc-qa-agent/`
+
+**What it does:** Give it documents (PDFs, text files), ask questions, get answers from YOUR data.
+
+**New concepts:**
+- Embeddings (converting text to numbers)
+- Vector databases (ChromaDB)
+- Chunking (splitting documents into searchable pieces)
+- Semantic search (finding text by meaning, not just keywords)
+
+**Packages needed:**
+```bash
+pip install chromadb sentence-transformers groq python-dotenv
+```
 
 ---
 
 ## Resources
 
+- Groq Console: https://console.groq.com/
+- Groq API docs: https://console.groq.com/docs/
+- Agentic AI Roadmap: https://balajichippada.com/roadmap
 - Anthropic API docs: https://docs.anthropic.com/
 - OpenAI API docs: https://platform.openai.com/docs
 - Prompt engineering guide: https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering
-- Model pricing: https://www.anthropic.com/pricing (Anthropic) / https://openai.com/pricing (OpenAI)
