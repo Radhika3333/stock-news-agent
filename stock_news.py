@@ -17,36 +17,40 @@ YELLOW = "\033[93m"
 WHITE = "\033[97m"
 RESET = "\033[0m"
 
-def summarize_news(headlines):
-      """Send headlines to Groq LLM and get a market summary"""
-
-      client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-
-      response = client.chat.completions.create(
-          model="llama-3.3-70b-versatile",
-          temperature=0.0,
-          max_tokens=300,
-          messages=[
-              {
-                  "role": "system",
-                  "content": """You are a stock market news analyst.
-  Given a list of headlines, provide exactly 3 bullet points summarizing the market
+def summarize_news(headlines):                                                     
+      """Send headlines to Groq LLM and get a market summary"""                    
+                                                                                     
+      try:
+          client = Groq(api_key=os.getenv("GROQ_API_KEY"))                           
+                                                                                   
+          response = client.chat.completions.create(                                 
+              model="llama-3.3-70b-versatile",
+              temperature=0.0,                                                       
+              max_tokens=300,                                                      
+              messages=[
+                  {
+                      "role": "system",
+                      "content": """You are a stock market news analyst.
+  Given a list of headlines, provide exactly 3 bullet points summarizing the market  
   mood.
-  Rules:
-  - Facts only, no investment advice
+  Rules:                                                                             
+  - Facts only, no investment advice                                                 
   - Each bullet should cover a different theme
-  - Keep each bullet under 20 words
-  - Format: "- Theme: Summary"
+  - Keep each bullet under 20 words                                                  
+  - Format: "- Theme: Summary"                                                       
   """
-              },
-              {
-                  "role": "user",
-                  "content": f"Summarize these headlines:\n{headlines}"
-              }
-          ]
-      )
+                  },                                                                 
+                  {                                                                
+                      "role": "user",                                                
+                      "content": f"Summarize these headlines:\n{headlines}"        
+                  }
+              ]
+          )
 
-      return response.choices[0].message.content
+          return response.choices[0].message.content
+
+      except Exception as e:
+          return f"Could not generate summary: {e}"
 def fetch_stock_news():
     """Fetch latest stock market news from Finnhub"""
 
