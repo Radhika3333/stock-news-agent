@@ -2,6 +2,7 @@ import requests
 import os
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
+from groq import Groq
 
 # Load API key from .env file
 load_dotenv()
@@ -16,6 +17,36 @@ YELLOW = "\033[93m"
 WHITE = "\033[97m"
 RESET = "\033[0m"
 
+def summarize_news(headlines):
+      """Send headlines to Groq LLM and get a market summary"""
+
+      client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+      response = client.chat.completions.create(
+          model="llama-3.3-70b-versatile",
+          temperature=0.0,
+          max_tokens=300,
+          messages=[
+              {
+                  "role": "system",
+                  "content": """You are a stock market news analyst.
+  Given a list of headlines, provide exactly 3 bullet points summarizing the market
+  mood.
+  Rules:
+  - Facts only, no investment advice
+  - Each bullet should cover a different theme
+  - Keep each bullet under 20 words
+  - Format: "- Theme: Summary"
+  """
+              },
+              {
+                  "role": "user",
+                  "content": f"Summarize these headlines:\n{headlines}"
+              }
+          ]
+      )
+
+      return response.choices[0].message.content
 def fetch_stock_news():
     """Fetch latest stock market news from Finnhub"""
 
@@ -81,6 +112,15 @@ def fetch_stock_news():
     print(f"\n  {DIM}{'─' * 54}{RESET}")
     print(f"  {DIM}Showing {len(recent_news)} article(s)  |  Source: Finnhub{RESET}")
     print()
+
+    # AI Summary                                                                 
+    headlines = "\n".join([article["headline"] for article in recent_news])
+    if headlines:                                                                  
+        summary = summarize_news(headlines)
+        print(f"  {GREEN}{BOLD}MARKET SUMMARY (AI){RESET}")                        
+        print(f"  {DIM}{'─' * 40}{RESET}")                                         
+        print(f"  {summary}")
+        print()   
 
 import time
 
